@@ -3,14 +3,10 @@
 #include "AlsAnimationInstanceProxy.h"
 #include "AlsCharacter.h"
 #include "DrawDebugHelpers.h"
-#include "Components/CapsuleComponent.h"
 #include "Curves/CurveFloat.h"
 #include "Engine/SkeletalMesh.h"
-#include "GameFramework/CharacterMovementComponent.h"
 #include "Settings/AlsAnimationInstanceSettings.h"
-#include "Settings/AlsCharacterSettings.h"
 #include "Utility/AlsConstants.h"
-#include "Utility/AlsDebugUtility.h"
 #include "Utility/AlsMacros.h"
 #include "Utility/AlsPrivateMemberAccessor.h"
 #include "Utility/AlsRotation.h"
@@ -127,7 +123,7 @@ FAnimInstanceProxy* UAlsAnimationInstance::CreateAnimInstanceProxy()
 	return new FAlsAnimationInstanceProxy{this};
 }
 
-FAlsControlRigInput UAlsAnimationInstance::GetControlRigInput() const
+FAlsControlRigInput UAlsAnimationInstance::TS_NativeGetControlRigInput() const
 {
 	return {.bUseHandIkBones         = !IsValid(Settings) || Settings->General.bUseHandIkBones,
 		.bUseFootIkBones             = !IsValid(Settings) || Settings->General.bUseFootIkBones,
@@ -139,6 +135,11 @@ FAlsControlRigInput UAlsAnimationInstance::GetControlRigInput() const
 		.FootRightLocation{FVector{FeetState.Right.FinalLocation}},
 		.FootRightRotation{FQuat{FeetState.Right.FinalRotation}},
 		.SpineYawAngle = SpineState.YawAngle};
+}
+
+FAlsControlRigInput UAlsAnimationInstance::GetControlRigInput() const
+{
+	return TS_NativeGetControlRigInput();
 }
 
 bool UAlsAnimationInstance::IsSpineRotationAllowed()

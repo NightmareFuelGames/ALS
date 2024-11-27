@@ -2,7 +2,7 @@
  * @Author: Kasper de Bruin bruinkasper@gmail.com
  * @Date: 2024-11-27 11:49:14
  * @LastEditors: Kasper de Bruin bruinkasper@gmail.com
- * @LastEditTime: 2024-11-27 12:52:43
+ * @LastEditTime: 2024-11-27 13:05:48
  * @FilePath: Plugins/Gameplay/ThirdParty/ALS/Source/ALS/Private/AnimInstance/Als_GT_AnimInstance.cpp
  * @Description: Function implementations of ALSAnimInstance That Happen On The Game Thread
  */
@@ -76,7 +76,7 @@ void UAlsAnimationInstance::GT_Refresh(const float DeltaTime)
 	RefreshLocomotionOnGameThread();
 	RefreshInAirOnGameThread();
 	RefreshFeetOnGameThread();
-	RefreshRagdollingOnGameThread();
+	RefreshRagdolOnGameThread();
 }
 
 void UAlsAnimationInstance::RefreshMovementBaseOnGameThread()
@@ -225,7 +225,7 @@ void UAlsAnimationInstance::RefreshFeetOnGameThread()
 	FeetState.Right.TargetRotation = FootRightTargetTransform.GetRotation();
 }
 
-void UAlsAnimationInstance::RefreshRagdollingOnGameThread()
+void UAlsAnimationInstance::RefreshRagdolOnGameThread()
 {
 	check(IsInGameThread())
 

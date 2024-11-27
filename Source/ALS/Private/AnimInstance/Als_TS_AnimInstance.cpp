@@ -2,7 +2,7 @@
  * @Author: Kasper de Bruin bruinkasper@gmail.com
  * @Date: 2024-11-27 11:49:14
  * @LastEditors: Kasper de Bruin bruinkasper@gmail.com
- * @LastEditTime: 2024-11-27 12:50:20
+ * @LastEditTime: 2024-11-27 13:02:19
  * @FilePath: Plugins/Gameplay/ThirdParty/ALS/Source/ALS/Private/AnimInstance/Als_TS_AnimInstance.cpp
  * @Description: Function implementations of ALSAnimInstance That Are Thread Safe
  */
@@ -26,11 +26,7 @@ void UAlsAnimationInstance::NativeThreadSafeUpdateAnimation(const float DeltaTim
 	RotateInPlaceState.bUpdatedThisFrame      = false;
 	TurnInPlaceState.bUpdatedThisFrame        = false;
 
-	TS_RefreshLayering();
-	TS_RefreshPose();
-	TS_RefreshView(DeltaTime);
-	TS_RefreshFeet(DeltaTime);
-	TS_RefreshTransitions();
+	TS_Refresh(DeltaTime);
 }
 
 #pragma region Native Thread Safe Operation Functions

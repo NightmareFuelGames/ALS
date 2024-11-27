@@ -38,7 +38,7 @@ private:
 
 	// ReSharper disable once CppUE4CodingStandardNamingViolationWarning
 	/**
-	 * \brief The refresh functions that are thread safe are called from here
+	 * \brief This calls the refresh functions that are thread safe and updates thread safe variables
 	 * \param DeltaTime The time since the last tick
 	 */
 	void TS_Refresh(const float DeltaTime);
@@ -49,107 +49,6 @@ private:
 	 * \param DeltaTime The time since the last tick
 	 */
 	void GT_Refresh(const float DeltaTime);
-
-protected:
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings") TObjectPtr<UAlsAnimationInstanceSettings> Settings;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	TObjectPtr<AAlsCharacter> Character;
-
-	// Used to indicate that the animation instance has not been updated for a long time
-	// and its current state may not be correct (such as foot location used in foot lock).
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	uint8 bPendingUpdate : 1 {true};
-
-	// Time of the last teleportation event.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient, Meta = (ClampMin = 0))
-	double TeleportedTime{0.0f};
-
-#if WITH_EDITORONLY_DATA
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	uint8 bDisplayDebugTraces : 1 {false};
-
-	mutable TArray<TFunction<void()>> DisplayDebugTracesQueue;
-#endif
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FGameplayTag ViewMode{AlsViewModeTags::ThirdPerson};
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FGameplayTag LocomotionMode{AlsLocomotionModeTags::Grounded};
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FGameplayTag RotationMode{AlsRotationModeTags::ViewDirection};
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FGameplayTag Stance{AlsStanceTags::Standing};
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FGameplayTag Gait{AlsGaitTags::Walking};
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FGameplayTag OverlayMode{AlsOverlayModeTags::Default};
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FGameplayTag LocomotionAction;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FGameplayTag GroundedEntryMode;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsMovementBaseState MovementBase;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsLayeringState LayeringState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsPoseState PoseState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsViewAnimationState ViewState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsSpineState SpineState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsLookState LookState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsLocomotionAnimationState LocomotionState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsLeanState LeanState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsGroundedState GroundedState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsStandingState StandingState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsCrouchingState CrouchingState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsInAirState InAirState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsFeetState FeetState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsTransitionsState TransitionsState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsDynamicTransitionsState DynamicTransitionsState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsRotateInPlaceState RotateInPlaceState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsTurnInPlaceState TurnInPlaceState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
-	FAlsRagdollingAnimationState RagdollingState;
 
 public:
 
@@ -167,15 +66,24 @@ protected:
 
 	virtual FAnimInstanceProxy* CreateAnimInstanceProxy() override;
 
+	// Control Rig
+
+private:
+
+	// ReSharper disable once CppUE4CodingStandardNamingViolationWarning
+	virtual FAlsControlRigInput TS_NativeGetControlRigInput() const;
+
+protected:
+
+	UFUNCTION(BlueprintPure, Category = "ALS|Animation Instance", Meta = (BlueprintThreadSafe, ReturnDisplayName = "Rig Input"))
+	FAlsControlRigInput GetControlRigInput() const;
+
 	// Core
 
 protected:
 
 	UFUNCTION(BlueprintPure, Category = "ALS|Animation Instance", Meta = (BlueprintThreadSafe, ReturnDisplayName = "Setting"))
 	UAlsAnimationInstanceSettings* GetSettingsUnsafe() const;
-
-	UFUNCTION(BlueprintPure, Category = "ALS|Animation Instance", Meta = (BlueprintThreadSafe, ReturnDisplayName = "Rig Input"))
-	FAlsControlRigInput GetControlRigInput() const;
 
 public:
 
@@ -187,8 +95,10 @@ private:
 
 	void RefreshMovementBaseOnGameThread();
 
+	// ReSharper disable once CppUE4CodingStandardNamingViolationWarning
 	void TS_RefreshLayering();
 
+	// ReSharper disable once CppUE4CodingStandardNamingViolationWarning
 	void TS_RefreshPose();
 
 	// View
@@ -197,6 +107,7 @@ private:
 
 	void RefreshViewOnGameThread();
 
+	// ReSharper disable once CppUE4CodingStandardNamingViolationWarning
 	void TS_RefreshView(float DeltaTime);
 
 public:
@@ -391,7 +302,7 @@ private:
 
 private:
 
-	void RefreshRagdollingOnGameThread();
+	void RefreshRagdolOnGameThread();
 
 public:
 
@@ -402,6 +313,107 @@ public:
 public:
 
 	float GetCurveValueClamped01(const FName& CurveName) const;
+
+protected:
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings") TObjectPtr<UAlsAnimationInstanceSettings> Settings;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	TObjectPtr<AAlsCharacter> Character;
+
+	// Used to indicate that the animation instance has not been updated for a long time
+	// and its current state may not be correct (such as foot location used in foot lock).
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	uint8 bPendingUpdate : 1 {true};
+
+	// Time of the last teleportation event.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient, Meta = (ClampMin = 0))
+	double TeleportedTime{0.0f};
+
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	uint8 bDisplayDebugTraces : 1 {false};
+
+	mutable TArray<TFunction<void()>> DisplayDebugTracesQueue;
+#endif
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FGameplayTag ViewMode{AlsViewModeTags::ThirdPerson};
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FGameplayTag LocomotionMode{AlsLocomotionModeTags::Grounded};
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FGameplayTag RotationMode{AlsRotationModeTags::ViewDirection};
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FGameplayTag Stance{AlsStanceTags::Standing};
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FGameplayTag Gait{AlsGaitTags::Walking};
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FGameplayTag OverlayMode{AlsOverlayModeTags::Default};
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FGameplayTag LocomotionAction;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FGameplayTag GroundedEntryMode;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsMovementBaseState MovementBase;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsLayeringState LayeringState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsPoseState PoseState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsViewAnimationState ViewState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsSpineState SpineState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsLookState LookState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsLocomotionAnimationState LocomotionState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsLeanState LeanState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsGroundedState GroundedState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsStandingState StandingState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsCrouchingState CrouchingState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsInAirState InAirState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsFeetState FeetState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsTransitionsState TransitionsState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsDynamicTransitionsState DynamicTransitionsState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsRotateInPlaceState RotateInPlaceState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsTurnInPlaceState TurnInPlaceState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
+	FAlsRagdollingAnimationState RagdollingState;
 };
 
 inline UAlsAnimationInstanceSettings* UAlsAnimationInstance::GetSettingsUnsafe() const
