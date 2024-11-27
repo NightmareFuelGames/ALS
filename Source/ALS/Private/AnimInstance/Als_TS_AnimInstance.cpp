@@ -2,7 +2,7 @@
  * @Author: Kasper de Bruin bruinkasper@gmail.com
  * @Date: 2024-11-27 11:49:14
  * @LastEditors: Kasper de Bruin bruinkasper@gmail.com
- * @LastEditTime: 2024-11-27 13:13:01
+ * @LastEditTime: 2024-11-27 13:13:51
  * @FilePath: Plugins/Gameplay/ThirdParty/ALS/Source/ALS/Private/AnimInstance/Als_TS_AnimInstance.cpp
  * @Description: Function implementations of ALSAnimInstance That Are Thread Safe
  */
@@ -534,7 +534,7 @@ void UAlsAnimationInstance::RefreshGroundPrediction()
 			DisplayDebugTracesQueue.Emplace(
 				[this, Hit, bGroundValid]
 				{
-					UAl sDebugUtility::DrawSweepSingleCapsule(GetWorld(), Hit.TraceStart, Hit.TraceEnd, FRotator::ZeroRotator,
+					UAlsDebugUtility::DrawSweepSingleCapsule(GetWorld(), Hit.TraceStart, Hit.TraceEnd, FRotator::ZeroRotator,
 						LocomotionState.CapsuleRadius, LocomotionState.CapsuleHalfHeight, bGroundValid, Hit, {0.25f, 0.0f, 1.0f},
 						{0.75f, 0.0f, 1.0f});
 				});
