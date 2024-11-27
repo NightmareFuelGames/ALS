@@ -68,12 +68,10 @@ protected:
 
 	// Control Rig
 
-private:
+protected:
 
 	// ReSharper disable once CppUE4CodingStandardNamingViolationWarning
 	virtual FAlsControlRigInput TS_NativeGetControlRigInput() const;
-
-protected:
 
 	UFUNCTION(BlueprintPure, Category = "ALS|Animation Instance", Meta = (BlueprintThreadSafe, ReturnDisplayName = "Rig Input"))
 	FAlsControlRigInput GetControlRigInput() const;

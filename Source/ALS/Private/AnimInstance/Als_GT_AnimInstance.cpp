@@ -2,7 +2,7 @@
  * @Author: Kasper de Bruin bruinkasper@gmail.com
  * @Date: 2024-11-27 11:49:14
  * @LastEditors: Kasper de Bruin bruinkasper@gmail.com
- * @LastEditTime: 2024-11-27 13:10:24
+ * @LastEditTime: 2024-11-27 13:42:44
  * @FilePath: Plugins/Gameplay/ThirdParty/ALS/Source/ALS/Private/AnimInstance/Als_GT_AnimInstance.cpp
  * @Description: Function implementations of ALSAnimInstance That Happen On The Game Thread
  */
