@@ -8,14 +8,19 @@
 #include "Engine/SkeletalMesh.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Settings/AlsAnimationInstanceSettings.h"
+#include "Settings/AlsCharacterSettings.h"
 #include "Utility/AlsConstants.h"
 #include "Utility/AlsDebugUtility.h"
 #include "Utility/AlsMacros.h"
+#include "Utility/AlsPrivateMemberAccessor.h"
 #include "Utility/AlsRotation.h"
 #include "Utility/AlsUtility.h"
 #include "Utility/AlsVector.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(AlsAnimationInstance)
+
+ALS_DEFINE_PRIVATE_MEMBER_ACCESSOR(AlsGetAnimationCurvesAccessor, &FAnimInstanceProxy::GetAnimationCurves,
+                                   const TMap<FName, float>& (FAnimInstanceProxy::*)(EAnimCurveType) const)
 
 void UAlsAnimationInstance::NativeInitializeAnimation()
 {
@@ -89,7 +94,7 @@ void UAlsAnimationInstance::NativeUpdateAnimation(const float DeltaTime)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::NativeUpdateAnimation"),
 	                            STAT_UAlsAnimationInstance_NativeUpdateAnimation, STATGROUP_Als)
-	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::NativeUpdateAnimation);
+	TRACE_CPUPROFILER_EVENT_SCOPE(__FUNCTION__);
 
 	Super::NativeUpdateAnimation(DeltaTime);
 
@@ -133,19 +138,28 @@ void UAlsAnimationInstance::NativeUpdateAnimation(const float DeltaTime)
 		ResetGroundedEntryMode();
 	}
 
+	const auto PreviousLocation{LocomotionState.Location};
+
 	RefreshMovementBaseOnGameThread();
 	RefreshViewOnGameThread();
 	RefreshLocomotionOnGameThread();
 	RefreshInAirOnGameThread();
 	RefreshFeetOnGameThread();
 	RefreshRagdollingOnGameThread();
+
+	if (!bPendingUpdate && IsValid(Character->GetSettings()) &&
+	    FVector::DistSquared(PreviousLocation, LocomotionState.Location) >
+	    FMath::Square(Character->GetSettings()->TeleportDistanceThreshold))
+	{
+		MarkTeleported();
+	}
 }
 
 void UAlsAnimationInstance::NativeThreadSafeUpdateAnimation(const float DeltaTime)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::NativeThreadSafeUpdateAnimation"),
 	                            STAT_UAlsAnimationInstance_NativeThreadSafeUpdateAnimation, STATGROUP_Als)
-	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::NativeThreadSafeUpdateAnimation);
+	TRACE_CPUPROFILER_EVENT_SCOPE(__FUNCTION__);
 
 	Super::NativeThreadSafeUpdateAnimation(DeltaTime);
 
@@ -172,7 +186,7 @@ void UAlsAnimationInstance::NativePostUpdateAnimation()
 
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::NativePostUpdateAnimation"),
 	                            STAT_UAlsAnimationInstance_NativePostUpdateAnimation, STATGROUP_Als)
-	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::NativePostUpdateAnimation);
+	TRACE_CPUPROFILER_EVENT_SCOPE(__FUNCTION__);
 
 	if (!IsValid(Settings) || !IsValid(Character))
 	{
@@ -249,7 +263,9 @@ void UAlsAnimationInstance::RefreshMovementBaseOnGameThread()
 
 void UAlsAnimationInstance::RefreshLayering()
 {
-	const auto& Curves{GetProxyOnAnyThread<FAlsAnimationInstanceProxy>().GetAnimationCurves(EAnimCurveType::AttributeCurve)};
+	const auto& Curves{
+		AlsGetAnimationCurvesAccessor::Access(GetProxyOnAnyThread<FAnimInstanceProxy>(), EAnimCurveType::AttributeCurve)
+	};
 
 	static const auto GetCurveValue{
 		[](const TMap<FName, float>& Curves, const FName& CurveName) -> float
@@ -296,7 +312,9 @@ void UAlsAnimationInstance::RefreshLayering()
 
 void UAlsAnimationInstance::RefreshPose()
 {
-	const auto& Curves{GetProxyOnAnyThread<FAlsAnimationInstanceProxy>().GetAnimationCurves(EAnimCurveType::AttributeCurve)};
+	const auto& Curves{
+		AlsGetAnimationCurvesAccessor::Access(GetProxyOnAnyThread<FAnimInstanceProxy>(), EAnimCurveType::AttributeCurve)
+	};
 
 	static const auto GetCurveValue{
 		[](const TMap<FName, float>& Curves, const FName& CurveName) -> float
@@ -483,7 +501,7 @@ void UAlsAnimationInstance::RefreshLook()
 #endif
 
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshLook"), STAT_UAlsAnimationInstance_RefreshLook, STATGROUP_Als)
-	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshLook);
+	TRACE_CPUPROFILER_EVENT_SCOPE(__FUNCTION__);
 
 	if (!IsValid(Settings))
 	{
@@ -567,19 +585,23 @@ void UAlsAnimationInstance::RefreshLocomotionOnGameThread()
 	check(IsInGameThread())
 
 	const auto* World{GetWorld()};
-	const auto ActorDeltaTime{IsValid(World) ? World->DeltaTimeSeconds * Character->CustomTimeDilation : 0.0f};
+
+	const auto ActorDeltaTime{IsValid(World) ? World->GetDeltaSeconds() * Character->CustomTimeDilation : 0.0f};
+	const auto bCanCalculateRateOfChange{!bPendingUpdate && ActorDeltaTime > UE_SMALL_NUMBER};
 
 	const auto& Locomotion{Character->GetLocomotionState()};
 
 	LocomotionState.bHasInput = Locomotion.bHasInput;
 	LocomotionState.InputYawAngle = Locomotion.InputYawAngle;
 
+	const auto PreviousVelocity{LocomotionState.Velocity};
+
 	LocomotionState.Speed = Locomotion.Speed;
 	LocomotionState.Velocity = Locomotion.Velocity;
 	LocomotionState.VelocityYawAngle = Locomotion.VelocityYawAngle;
 
-	LocomotionState.Acceleration = ActorDeltaTime > UE_SMALL_NUMBER
-		                               ? (Locomotion.Velocity - Locomotion.PreviousVelocity) / ActorDeltaTime
+	LocomotionState.Acceleration = bCanCalculateRateOfChange
+		                               ? (LocomotionState.Velocity - PreviousVelocity) / ActorDeltaTime
 		                               : FVector::ZeroVector;
 
 	const auto* Movement{Character->GetCharacterMovement()};
@@ -594,16 +616,56 @@ void UAlsAnimationInstance::RefreshLocomotionOnGameThread()
 	                                Locomotion.Speed > Settings->General.MovingSmoothSpeedThreshold;
 
 	LocomotionState.TargetYawAngle = Locomotion.TargetYawAngle;
-	LocomotionState.Location = Locomotion.Location;
-	LocomotionState.Rotation = Locomotion.Rotation;
-	LocomotionState.RotationQuaternion = Locomotion.Rotation.Quaternion();
 
-	LocomotionState.YawSpeed = ActorDeltaTime > UE_SMALL_NUMBER
+	const auto PreviousYawAngle{LocomotionState.Rotation.Yaw};
+
+	const auto& Proxy{GetProxyOnGameThread<FAnimInstanceProxy>()};
+	const auto& ActorTransform{Proxy.GetActorTransform()};
+	const auto& MeshRelativeTransform{Proxy.GetComponentRelativeTransform()};
+
+	static const auto* EnableListenServerSmoothingConsoleVariable{
+		IConsoleManager::Get().FindConsoleVariable(TEXT("p.NetEnableListenServerSmoothing"))
+	};
+	check(EnableListenServerSmoothingConsoleVariable != nullptr)
+
+	if (Movement->NetworkSmoothingMode == ENetworkSmoothingMode::Disabled ||
+	    (Character->GetLocalRole() != ROLE_SimulatedProxy &&
+	     !(Character->IsNetMode(NM_ListenServer) && EnableListenServerSmoothingConsoleVariable->GetBool())))
+	{
+		// If the network smoothing is disabled, use the regular actor transform.
+
+		LocomotionState.Location = ActorTransform.GetLocation();
+		LocomotionState.Rotation = ActorTransform.Rotator();
+		LocomotionState.RotationQuaternion = ActorTransform.GetRotation();
+	}
+	else if (GetSkelMeshComponent()->IsUsingAbsoluteRotation())
+	{
+		LocomotionState.Location = ActorTransform.TransformPosition(
+			MeshRelativeTransform.GetLocation() - Character->GetBaseTranslationOffset());
+
+		LocomotionState.Rotation = ActorTransform.Rotator();
+		LocomotionState.RotationQuaternion = ActorTransform.GetRotation();
+	}
+	else
+	{
+		const auto SmoothTransform{
+			ActorTransform * FTransform{
+				MeshRelativeTransform.GetRotation() * Character->GetBaseRotationOffset().Inverse(),
+				MeshRelativeTransform.GetLocation() - Character->GetBaseTranslationOffset()
+			}
+		};
+
+		LocomotionState.Location = SmoothTransform.GetLocation();
+		LocomotionState.Rotation = SmoothTransform.Rotator();
+		LocomotionState.RotationQuaternion = SmoothTransform.GetRotation();
+	}
+
+	LocomotionState.YawSpeed = bCanCalculateRateOfChange
 		                           ? FMath::UnwindDegrees(UE_REAL_TO_FLOAT(
-			                             Locomotion.Rotation.Yaw - Locomotion.PreviousYawAngle)) / ActorDeltaTime
+			                             LocomotionState.Rotation.Yaw - PreviousYawAngle)) / ActorDeltaTime
 		                           : 0.0f;
 
-	LocomotionState.Scale = UE_REAL_TO_FLOAT(GetSkelMeshComponent()->GetComponentScale().Z);
+	LocomotionState.Scale = UE_REAL_TO_FLOAT(Proxy.GetComponentTransform().GetScale3D().Z);
 
 	const auto* Capsule{Character->GetCapsuleComponent()};
 
@@ -632,7 +694,7 @@ void UAlsAnimationInstance::RefreshGrounded()
 #endif
 
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshGrounded"), STAT_UAlsAnimationInstance_RefreshGrounded, STATGROUP_Als)
-	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshGrounded);
+	TRACE_CPUPROFILER_EVENT_SCOPE(__FUNCTION__);
 
 	if (!IsValid(Settings))
 	{
@@ -688,7 +750,7 @@ void UAlsAnimationInstance::RefreshVelocityBlend()
 			(FMath::Abs(RelativeVelocityDirection.X) + FMath::Abs(RelativeVelocityDirection.Y) + FMath::Abs(RelativeVelocityDirection.Z));
 	}
 
-	if (VelocityBlend.bInitializationRequired)
+	if (VelocityBlend.bInitializationRequired || Settings->Grounded.VelocityBlendInterpolationSpeed <= 0.0f)
 	{
 		VelocityBlend.bInitializationRequired = false;
 
@@ -699,23 +761,26 @@ void UAlsAnimationInstance::RefreshVelocityBlend()
 	}
 	else
 	{
-		const auto DeltaTime{GetDeltaSeconds()};
+		// WWe use UAlsMath::ExponentialDecay() instead of FMath::FInterpTo(), because FMath::FInterpTo() is very sensitive to large
+		// delta time, at low FPS interpolation becomes almost instant which causes issues with character pose during the stop.
 
-		VelocityBlend.ForwardAmount = FMath::FInterpTo(VelocityBlend.ForwardAmount,
-		                                               UAlsMath::Clamp01(TargetVelocityBlend.X),
-		                                               DeltaTime, Settings->Grounded.VelocityBlendInterpolationSpeed);
+		const auto InterpolationAmount{UAlsMath::ExponentialDecay(GetDeltaSeconds(), Settings->Grounded.VelocityBlendInterpolationSpeed)};
 
-		VelocityBlend.BackwardAmount = FMath::FInterpTo(VelocityBlend.BackwardAmount,
-		                                                FMath::Abs(FMath::Clamp(TargetVelocityBlend.X, -1.0f, 0.0f)),
-		                                                DeltaTime, Settings->Grounded.VelocityBlendInterpolationSpeed);
+		VelocityBlend.ForwardAmount = FMath::Lerp(VelocityBlend.ForwardAmount,
+		                                          UAlsMath::Clamp01(TargetVelocityBlend.X),
+		                                          InterpolationAmount);
 
-		VelocityBlend.LeftAmount = FMath::FInterpTo(VelocityBlend.LeftAmount,
-		                                            FMath::Abs(FMath::Clamp(TargetVelocityBlend.Y, -1.0f, 0.0f)),
-		                                            DeltaTime, Settings->Grounded.VelocityBlendInterpolationSpeed);
+		VelocityBlend.BackwardAmount = FMath::Lerp(VelocityBlend.BackwardAmount,
+		                                           FMath::Abs(FMath::Clamp(TargetVelocityBlend.X, -1.0f, 0.0f)),
+		                                           InterpolationAmount);
 
-		VelocityBlend.RightAmount = FMath::FInterpTo(VelocityBlend.RightAmount,
-		                                             UAlsMath::Clamp01(TargetVelocityBlend.Y),
-		                                             DeltaTime, Settings->Grounded.VelocityBlendInterpolationSpeed);
+		VelocityBlend.LeftAmount = FMath::Lerp(VelocityBlend.LeftAmount,
+		                                       FMath::Abs(FMath::Clamp(TargetVelocityBlend.Y, -1.0f, 0.0f)),
+		                                       InterpolationAmount);
+
+		VelocityBlend.RightAmount = FMath::Lerp(VelocityBlend.RightAmount,
+		                                        UAlsMath::Clamp01(TargetVelocityBlend.Y),
+		                                        InterpolationAmount);
 	}
 }
 
@@ -723,20 +788,17 @@ void UAlsAnimationInstance::RefreshGroundedLean()
 {
 	const auto TargetLeanAmount{GetRelativeAccelerationAmount()};
 
-	if (bPendingUpdate)
+	if (bPendingUpdate || Settings->General.LeanInterpolationSpeed <= 0.0f)
 	{
 		LeanState.RightAmount = TargetLeanAmount.Y;
 		LeanState.ForwardAmount = TargetLeanAmount.X;
 	}
 	else
 	{
-		const auto DeltaTime{GetDeltaSeconds()};
+		const auto InterpolationAmount{UAlsMath::ExponentialDecay(GetDeltaSeconds(), Settings->General.LeanInterpolationSpeed)};
 
-		LeanState.RightAmount = FMath::FInterpTo(LeanState.RightAmount, TargetLeanAmount.Y,
-		                                         DeltaTime, Settings->General.LeanInterpolationSpeed);
-
-		LeanState.ForwardAmount = FMath::FInterpTo(LeanState.ForwardAmount, TargetLeanAmount.X,
-		                                           DeltaTime, Settings->General.LeanInterpolationSpeed);
+		LeanState.RightAmount = FMath::Lerp(LeanState.RightAmount, TargetLeanAmount.Y, InterpolationAmount);
+		LeanState.ForwardAmount = FMath::Lerp(LeanState.ForwardAmount, TargetLeanAmount.X, InterpolationAmount);
 	}
 }
 
@@ -751,7 +813,7 @@ void UAlsAnimationInstance::RefreshGroundedMovement()
 
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshGroundedMovement"),
 	                            STAT_UAlsAnimationInstance_RefreshGroundedMovement, STATGROUP_Als)
-	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshGroundedMovement);
+	TRACE_CPUPROFILER_EVENT_SCOPE(__FUNCTION__);
 
 	if (!IsValid(Settings))
 	{
@@ -817,7 +879,7 @@ void UAlsAnimationInstance::RefreshStandingMovement()
 
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshStandingMovement"),
 	                            STAT_UAlsAnimationInstance_RefreshStandingMovement, STATGROUP_Als)
-	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshStandingMovement);
+	TRACE_CPUPROFILER_EVENT_SCOPE(__FUNCTION__);
 
 	if (!IsValid(Settings))
 	{
@@ -904,7 +966,7 @@ void UAlsAnimationInstance::RefreshCrouchingMovement()
 
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshCrouchingMovement"),
 	                            STAT_UAlsAnimationInstance_RefreshCrouchingMovement, STATGROUP_Als)
-	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshCrouchingMovement);
+	TRACE_CPUPROFILER_EVENT_SCOPE(__FUNCTION__);
 
 	if (!IsValid(Settings))
 	{
@@ -938,7 +1000,7 @@ void UAlsAnimationInstance::RefreshInAir()
 #endif
 
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshInAir"), STAT_UAlsAnimationInstance_RefreshInAir, STATGROUP_Als)
-	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshInAir);
+	TRACE_CPUPROFILER_EVENT_SCOPE(__FUNCTION__);
 
 	if (!IsValid(Settings))
 	{
@@ -1049,20 +1111,17 @@ void UAlsAnimationInstance::RefreshInAirLean()
 		GetRelativeVelocity() / ReferenceSpeed * Settings->InAir.LeanAmountCurve->GetFloatValue(InAirState.VerticalVelocity)
 	};
 
-	if (bPendingUpdate)
+	if (bPendingUpdate || Settings->General.LeanInterpolationSpeed <= 0.0f)
 	{
 		LeanState.RightAmount = TargetLeanAmount.Y;
 		LeanState.ForwardAmount = TargetLeanAmount.X;
 	}
 	else
 	{
-		const auto DeltaTime{GetDeltaSeconds()};
+		const auto InterpolationAmount{UAlsMath::ExponentialDecay(GetDeltaSeconds(), Settings->General.LeanInterpolationSpeed)};
 
-		LeanState.RightAmount = FMath::FInterpTo(LeanState.RightAmount, TargetLeanAmount.Y,
-		                                         DeltaTime, Settings->General.LeanInterpolationSpeed);
-
-		LeanState.ForwardAmount = FMath::FInterpTo(LeanState.ForwardAmount, TargetLeanAmount.X,
-		                                           DeltaTime, Settings->General.LeanInterpolationSpeed);
+		LeanState.RightAmount = FMath::Lerp(LeanState.RightAmount, TargetLeanAmount.Y, InterpolationAmount);
+		LeanState.ForwardAmount = FMath::Lerp(LeanState.ForwardAmount, TargetLeanAmount.X, InterpolationAmount);
 	}
 }
 
@@ -1433,7 +1492,7 @@ void UAlsAnimationInstance::RefreshDynamicTransitions()
 
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshDynamicTransitions"),
 	                            STAT_UAlsAnimationInstance_RefreshDynamicTransitions, STATGROUP_Als)
-	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshDynamicTransitions);
+	TRACE_CPUPROFILER_EVENT_SCOPE(__FUNCTION__);
 
 	if (DynamicTransitionsState.bUpdatedThisFrame || !IsValid(Settings))
 	{
@@ -1580,7 +1639,7 @@ void UAlsAnimationInstance::RefreshRotateInPlace()
 
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshRotateInPlace"),
 	                            STAT_UAlsAnimationInstance_RefreshRotateInPlace, STATGROUP_Als)
-	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshRotateInPlace);
+	TRACE_CPUPROFILER_EVENT_SCOPE(__FUNCTION__);
 
 	if (RotateInPlaceState.bUpdatedThisFrame || !IsValid(Settings))
 	{
@@ -1648,7 +1707,7 @@ void UAlsAnimationInstance::RefreshTurnInPlace()
 
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("UAlsAnimationInstance::RefreshTurnInPlace"),
 	                            STAT_UAlsAnimationInstance_RefreshTurnInPlace, STATGROUP_Als)
-	TRACE_CPUPROFILER_EVENT_SCOPE(UAlsAnimationInstance::RefreshTurnInPlace);
+	TRACE_CPUPROFILER_EVENT_SCOPE(__FUNCTION__);
 
 	if (TurnInPlaceState.bUpdatedThisFrame || !IsValid(Settings))
 	{

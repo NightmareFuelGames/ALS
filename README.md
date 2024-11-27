@@ -2,7 +2,7 @@
 
 # Advanced Locomotion System Refactored
 
-Completely reworked and improved С++ version of [Advanced Locomotion System V4](https://www.unrealengine.com/marketplace/en-US/product/advanced-locomotion-system-v1).
+Completely reworked and improved С++ version of [Advanced Locomotion System V4](https://www.fab.com/listings/ef9651a4-fb55-4866-a2d9-1b38b028f9c7).
 
 The main goal of this ALS version is a complete and high-quality refactoring of all aspects of the plugin to make it easier to understand, flexible, reliable (especially in network multiplayer), performant, and simply more enjoyable to work with.
 
@@ -42,6 +42,7 @@ For more information, see the [Releases](https://github.com/Sixze/ALS-Refactored
 
 | Plugin Version                                                            | Unreal Engine Version           |
 |---------------------------------------------------------------------------|---------------------------------|
+| [4.15](https://github.com/Sixze/ALS-Refactored/releases/tag/4.15)         | 5.5                             |
 | [4.14](https://github.com/Sixze/ALS-Refactored/releases/tag/4.14)         | 5.4                             |
 | [4.13](https://github.com/Sixze/ALS-Refactored/releases/tag/4.13)         | 5.3                             |
 | [4.12](https://github.com/Sixze/ALS-Refactored/releases/tag/4.12)         | 5.2                             |
