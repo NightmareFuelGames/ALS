@@ -302,7 +302,7 @@ private:
 
 private:
 
-	void RefreshRagdolOnGameThread();
+	void RefreshRagdollOnGameThread();
 
 public:
 

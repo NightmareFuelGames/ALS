@@ -2,12 +2,30 @@
  * @Author: Kasper de Bruin bruinkasper@gmail.com
  * @Date: 2024-11-27 11:49:14
  * @LastEditors: Kasper de Bruin bruinkasper@gmail.com
- * @LastEditTime: 2024-11-27 13:02:19
+ * @LastEditTime: 2024-11-27 13:13:01
  * @FilePath: Plugins/Gameplay/ThirdParty/ALS/Source/ALS/Private/AnimInstance/Als_TS_AnimInstance.cpp
  * @Description: Function implementations of ALSAnimInstance That Are Thread Safe
  */
 
 #include "AlsAnimationInstance.h"
+
+#include "AlsAnimationInstanceProxy.h"
+#include "AlsCharacter.h"
+#include "DrawDebugHelpers.h"
+#include "Curves/CurveFloat.h"
+#include "Engine/SkeletalMesh.h"
+#include "Settings/AlsAnimationInstanceSettings.h"
+#include "Utility/AlsConstants.h"
+#include "Utility/AlsDebugUtility.h"
+#include "Utility/AlsMacros.h"
+#include "Utility/AlsPrivateMemberAccessor.h"
+#include "Utility/AlsRotation.h"
+#include "Utility/AlsUtility.h"
+
+#include "Utility/AlsVector.h"
+
+ALS_DEFINE_PRIVATE_MEMBER_ACCESSOR(AlsGetAnimationCurvesAccessor, &FAnimInstanceProxy::GetAnimationCurves,
+	const TMap<FName, float>& (FAnimInstanceProxy::*) (EAnimCurveType) const)
 
 void UAlsAnimationInstance::NativeThreadSafeUpdateAnimation(const float DeltaTime)
 {
@@ -516,7 +534,7 @@ void UAlsAnimationInstance::RefreshGroundPrediction()
 			DisplayDebugTracesQueue.Emplace(
 				[this, Hit, bGroundValid]
 				{
-					UAlsDebugUtility::DrawSweepSingleCapsule(GetWorld(), Hit.TraceStart, Hit.TraceEnd, FRotator::ZeroRotator,
+					UAl sDebugUtility::DrawSweepSingleCapsule(GetWorld(), Hit.TraceStart, Hit.TraceEnd, FRotator::ZeroRotator,
 						LocomotionState.CapsuleRadius, LocomotionState.CapsuleHalfHeight, bGroundValid, Hit, {0.25f, 0.0f, 1.0f},
 						{0.75f, 0.0f, 1.0f});
 				});

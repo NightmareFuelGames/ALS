@@ -8,15 +8,11 @@
 #include "Settings/AlsAnimationInstanceSettings.h"
 #include "Utility/AlsConstants.h"
 #include "Utility/AlsMacros.h"
-#include "Utility/AlsPrivateMemberAccessor.h"
 #include "Utility/AlsRotation.h"
 #include "Utility/AlsUtility.h"
 #include "Utility/AlsVector.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(AlsAnimationInstance)
-
-ALS_DEFINE_PRIVATE_MEMBER_ACCESSOR(AlsGetAnimationCurvesAccessor, &FAnimInstanceProxy::GetAnimationCurves,
-	const TMap<FName, float>& (FAnimInstanceProxy::*) (EAnimCurveType) const)
 
 void UAlsAnimationInstance::NativeInitializeAnimation()
 {

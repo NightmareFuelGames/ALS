@@ -2,12 +2,26 @@
  * @Author: Kasper de Bruin bruinkasper@gmail.com
  * @Date: 2024-11-27 11:49:14
  * @LastEditors: Kasper de Bruin bruinkasper@gmail.com
- * @LastEditTime: 2024-11-27 13:05:48
+ * @LastEditTime: 2024-11-27 13:10:24
  * @FilePath: Plugins/Gameplay/ThirdParty/ALS/Source/ALS/Private/AnimInstance/Als_GT_AnimInstance.cpp
  * @Description: Function implementations of ALSAnimInstance That Happen On The Game Thread
  */
 
 #include "AlsAnimationInstance.h"
+
+#include "AlsAnimationInstanceProxy.h"
+#include "AlsCharacter.h"
+#include "DrawDebugHelpers.h"
+#include "Components/CapsuleComponent.h"
+#include "Curves/CurveFloat.h"
+#include "Engine/SkeletalMesh.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Settings/AlsAnimationInstanceSettings.h"
+#include "Settings/AlsCharacterSettings.h"
+#include "Utility/AlsConstants.h"
+#include "Utility/AlsDebugUtility.h"
+#include "Utility/AlsRotation.h"
+#include "Utility/AlsUtility.h"
 
 void UAlsAnimationInstance::NativeUpdateAnimation(const float DeltaTime)
 {
@@ -76,7 +90,7 @@ void UAlsAnimationInstance::GT_Refresh(const float DeltaTime)
 	RefreshLocomotionOnGameThread();
 	RefreshInAirOnGameThread();
 	RefreshFeetOnGameThread();
-	RefreshRagdolOnGameThread();
+	RefreshRagdollOnGameThread();
 }
 
 void UAlsAnimationInstance::RefreshMovementBaseOnGameThread()
@@ -225,7 +239,7 @@ void UAlsAnimationInstance::RefreshFeetOnGameThread()
 	FeetState.Right.TargetRotation = FootRightTargetTransform.GetRotation();
 }
 
-void UAlsAnimationInstance::RefreshRagdolOnGameThread()
+void UAlsAnimationInstance::RefreshRagdollOnGameThread()
 {
 	check(IsInGameThread())
 
