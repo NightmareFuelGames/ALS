@@ -34,9 +34,25 @@ class ALS_API UAlsAnimationInstance : public UAnimInstance
 
 	friend UAlsLinkedAnimationInstance;
 
+private:
+
+	// ReSharper disable once CppUE4CodingStandardNamingViolationWarning
+	/**
+	 * \brief The refresh functions that are thread safe are called from here
+	 * \param DeltaTime The time since the last tick
+	 */
+	void TS_Refresh(const float DeltaTime);
+
+	// ReSharper disable once CppUE4CodingStandardNamingViolationWarning
+	/**
+	 * \brief The refresh functions that happen on the "Game Thread" are called from here
+	 * \param DeltaTime The time since the last tick
+	 */
+	void GT_Refresh(const float DeltaTime);
+
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings")
-	TObjectPtr<UAlsAnimationInstanceSettings> Settings;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings") TObjectPtr<UAlsAnimationInstanceSettings> Settings;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State", Transient)
 	TObjectPtr<AAlsCharacter> Character;
@@ -171,9 +187,9 @@ private:
 
 	void RefreshMovementBaseOnGameThread();
 
-	void RefreshLayering();
+	void TS_RefreshLayering();
 
-	void RefreshPose();
+	void TS_RefreshPose();
 
 	// View
 
@@ -181,7 +197,7 @@ private:
 
 	void RefreshViewOnGameThread();
 
-	void RefreshView(float DeltaTime);
+	void TS_RefreshView(float DeltaTime);
 
 public:
 
@@ -295,7 +311,7 @@ private:
 
 	void RefreshFeetOnGameThread();
 
-	void RefreshFeet(float DeltaTime);
+	void TS_RefreshFeet(float DeltaTime);
 
 	void RefreshFoot(FAlsFootState& FootState, const FName& IkCurveName, const FName& LockCurveName,
 		const FTransform& ComponentTransformInverse, float DeltaTime) const;
@@ -336,7 +352,7 @@ protected:
 
 private:
 
-	void RefreshTransitions();
+	void TS_RefreshTransitions();
 
 	void PlayQueuedTransitionAnimation();
 
