@@ -2,7 +2,7 @@
  * @Author: Kasper de Bruin bruinkasper@gmail.com
  * @Date: 2024-11-27 11:49:14
  * @LastEditors: Kasper de Bruin bruinkasper@gmail.com
- * @LastEditTime: 2024-11-27 12:17:28
+ * @LastEditTime: 2024-11-27 12:50:20
  * @FilePath: Plugins/Gameplay/ThirdParty/ALS/Source/ALS/Private/AnimInstance/Als_TS_AnimInstance.cpp
  * @Description: Function implementations of ALSAnimInstance That Are Thread Safe
  */
@@ -25,7 +25,15 @@ void UAlsAnimationInstance::NativeThreadSafeUpdateAnimation(const float DeltaTim
 	DynamicTransitionsState.bUpdatedThisFrame = false;
 	RotateInPlaceState.bUpdatedThisFrame      = false;
 	TurnInPlaceState.bUpdatedThisFrame        = false;
+
+	TS_RefreshLayering();
+	TS_RefreshPose();
+	TS_RefreshView(DeltaTime);
+	TS_RefreshFeet(DeltaTime);
+	TS_RefreshTransitions();
 }
+
+#pragma region Native Thread Safe Operation Functions
 
 void UAlsAnimationInstance::TS_Refresh(const float DeltaTime)
 {
@@ -148,6 +156,14 @@ void UAlsAnimationInstance::TS_RefreshFeet(const float DeltaTime)
 		DeltaTime);
 }
 
+void UAlsAnimationInstance::TS_RefreshTransitions()
+{
+	// The allow transitions curve is modified within certain states, so that transitions allowed will be true while in those states.
+	TransitionsState.bTransitionsAllowed = FAnimWeight::IsFullWeight(GetCurveValue(UAlsConstants::AllowTransitionsCurveName()));
+}
+
+#pragma endregion
+
 void UAlsAnimationInstance::RefreshFoot(FAlsFootState& FootState, const FName& IkCurveName, const FName& LockCurveName,
 	const FTransform& ComponentTransformInverse, const float DeltaTime) const
 {
@@ -158,14 +174,7 @@ void UAlsAnimationInstance::RefreshFoot(FAlsFootState& FootState, const FName& I
 	RefreshFootLock(IkAmount, FootState, LockCurveName, ComponentTransformInverse, DeltaTime);
 }
 
-void UAlsAnimationInstance::TS_RefreshTransitions()
-{
-	// The allow transitions curve is modified within certain states, so that transitions allowed will be true while in those states.
-
-	TransitionsState.bTransitionsAllowed = FAnimWeight::IsFullWeight(GetCurveValue(UAlsConstants::AllowTransitionsCurveName()));
-}
-
-/*UFUNTIONS*/
+/*UFUNTION*/
 void UAlsAnimationInstance::RefreshDynamicTransitions()
 {
 #if WITH_EDITOR
@@ -263,7 +272,7 @@ void UAlsAnimationInstance::RefreshDynamicTransitions()
 		}
 	}
 }
-
+/*UFUNTION*/
 void UAlsAnimationInstance::RefreshRotateInPlace()
 {
 #if WITH_EDITOR
@@ -316,7 +325,7 @@ void UAlsAnimationInstance::RefreshRotateInPlace()
 	RotateInPlaceState.PlayRate =
 		bPendingUpdate ? PlayRate : FMath::FInterpTo(RotateInPlaceState.PlayRate, PlayRate, GetDeltaSeconds(), PlayRateInterpolationSpeed);
 }
-
+/*UFUNTION*/
 void UAlsAnimationInstance::RefreshTurnInPlace()
 {
 #if WITH_EDITOR
@@ -414,7 +423,7 @@ void UAlsAnimationInstance::RefreshTurnInPlace()
 		}
 	}
 }
-
+/*UFUNTION*/
 void UAlsAnimationInstance::RefreshInAir()
 {
 #if WITH_EDITOR
@@ -449,6 +458,7 @@ void UAlsAnimationInstance::RefreshInAir()
 	RefreshGroundPrediction();
 	RefreshInAirLean();
 }
+
 /*Gets Called from the ufunction*/
 void UAlsAnimationInstance::RefreshGroundPrediction()
 {

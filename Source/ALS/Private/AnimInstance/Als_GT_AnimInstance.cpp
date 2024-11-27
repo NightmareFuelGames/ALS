@@ -2,7 +2,7 @@
  * @Author: Kasper de Bruin bruinkasper@gmail.com
  * @Date: 2024-11-27 11:49:14
  * @LastEditors: Kasper de Bruin bruinkasper@gmail.com
- * @LastEditTime: 2024-11-27 12:15:41
+ * @LastEditTime: 2024-11-27 12:52:43
  * @FilePath: Plugins/Gameplay/ThirdParty/ALS/Source/ALS/Private/AnimInstance/Als_GT_AnimInstance.cpp
  * @Description: Function implementations of ALSAnimInstance That Happen On The Game Thread
  */
@@ -203,6 +203,7 @@ void UAlsAnimationInstance::RefreshLocomotionOnGameThread()
 	LocomotionState.CapsuleRadius     = Capsule->GetScaledCapsuleRadius();
 	LocomotionState.CapsuleHalfHeight = Capsule->GetScaledCapsuleHalfHeight();
 }
+
 void UAlsAnimationInstance::RefreshFeetOnGameThread()
 {
 	check(IsInGameThread())
